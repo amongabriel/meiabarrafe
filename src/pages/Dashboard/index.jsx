@@ -12,7 +12,8 @@ import {
   Paper,
   TableHead,
   IconButton,
-  Tooltip
+  Tooltip,
+  Link
 } from '@mui/material';
 import {
   DeleteOutline,
@@ -76,6 +77,13 @@ const Dashboard = () => {
         <Typography variant="h4" component="div" gutterBottom>
           Cadastro dos papéis do robô Meia Barra
         </Typography>
+        <Link
+          href='https://meiabarra.herokuapp.com/api-docs'
+          nderline="hover"
+          target="_blank"
+          rel="noopener" >
+          api-docs
+        </Link>
       </Box>
       <OperacoesForm onComplete={onComplete} operacao={operacaoEdit} />
       <TableContainer component={Paper} sx={{ marginTop: "2rem" }}>

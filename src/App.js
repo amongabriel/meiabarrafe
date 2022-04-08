@@ -9,7 +9,6 @@ const App = () => (
     <Router>
       <SnackbarProvider
         maxSnack={4}
-        preventDuplicate
         anchorOrigin={{
           vertical: 'top',
           horizontal: 'right',
