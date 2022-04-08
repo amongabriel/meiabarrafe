@@ -1,121 +1,139 @@
-import { Component } from 'react';
-
-import Header from '../../components/Header';
+import { useCallback, useEffect, useState } from 'react';
+import { useSnackbar } from 'notistack';
+import {
+  Box,
+  Container,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+  TableContainer,
+  Paper,
+  TableHead,
+  IconButton,
+  Tooltip
+} from '@mui/material';
+import {
+  DeleteOutline,
+  EditOutlined
+} from '@mui/icons-material';
 import api from '../../services/api';
-import Food from '../../components/Food';
-import ModalAddFood from '../../components/ModalAddFood';
-import ModalEditFood from '../../components/ModalEditFood';
-import { FoodsContainer } from './styles';
+import OperacoesForm from './OperacoesForm';
 
-class Dashboard extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      foods: [],
-      editingFood: {},
-      modalOpen: false,
-      editModalOpen: false,
-    }
-  }
 
-  async componentDidMount() {
-    const response = await api.get('/foods');
+const Dashboard = () => {
+  const [operacoes, setOperacoes] = useState([])
+  const [operacaoEdit, setOperacaoEdit] = useState(null)
+  const { enqueueSnackbar } = useSnackbar();
 
-    this.setState({ foods: response.data });
-  }
-
-  handleAddFood = async food => {
-    const { foods } = this.state;
-
+  const getOperacoes = useCallback(async () => {
     try {
-      const response = await api.post('/foods', {
-        ...food,
-        available: true,
+      const response = await api.get('/papeis');
+
+      setOperacoes(response.data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  useEffect(() => {
+    getOperacoes();
+  }, [getOperacoes])
+
+
+  const onComplete = () => {
+    setOperacaoEdit(null)
+    getOperacoes()
+  }
+
+  const handleDeleteOperacao = async uuid => {
+    try {
+
+      const response = await api.delete(`/papeis/${uuid}`);
+      getOperacoes();
+      enqueueSnackbar(response.data.msg || 'Operação excluída com sucesso!', {
+        variant: 'success'
       });
 
-      this.setState({ foods: [...foods, response.data] });
-    } catch (err) {
-      console.log(err);
+    } catch (error) {
+      console.error(error.response.data.error);
+      enqueueSnackbar(error.response.data.error || error.message, {
+        variant: 'error'
+      });
     }
+
   }
 
-  handleUpdateFood = async food => {
-    const { foods, editingFood } = this.state;
-
-    try {
-      const foodUpdated = await api.put(
-        `/foods/${editingFood.id}`,
-        { ...editingFood, ...food },
-      );
-
-      const foodsUpdated = foods.map(f =>
-        f.id !== foodUpdated.data.id ? f : foodUpdated.data,
-      );
-
-      this.setState({ foods: foodsUpdated });
-    } catch (err) {
-      console.log(err);
-    }
+  const prepareToEdit = (operacao) => {
+    console.log(operacao)
+    setOperacaoEdit(operacao);
   }
 
-  handleDeleteFood = async id => {
-    const { foods } = this.state;
-
-    await api.delete(`/foods/${id}`);
-
-    const foodsFiltered = foods.filter(food => food.id !== id);
-
-    this.setState({ foods: foodsFiltered });
-  }
-
-  toggleModal = () => {
-    const { modalOpen } = this.state;
-
-    this.setState({ modalOpen: !modalOpen });
-  }
-
-  toggleEditModal = () => {
-    const { editModalOpen } = this.state;
-
-    this.setState({ editModalOpen: !editModalOpen });
-  }
-
-  handleEditFood = food => {
-    this.setState({ editingFood: food, editModalOpen: true });
-  }
-
-  render() {
-    const { modalOpen, editModalOpen, editingFood, foods } = this.state;
-
-    return (
-      <>
-        <Header openModal={this.toggleModal} />
-        <ModalAddFood
-          isOpen={modalOpen}
-          setIsOpen={this.toggleModal}
-          handleAddFood={this.handleAddFood}
-        />
-        <ModalEditFood
-          isOpen={editModalOpen}
-          setIsOpen={this.toggleEditModal}
-          editingFood={editingFood}
-          handleUpdateFood={this.handleUpdateFood}
-        />
-
-        <FoodsContainer data-testid="foods-list">
-          {foods &&
-            foods.map(food => (
-              <Food
-                key={food.id}
-                food={food}
-                handleDelete={this.handleDeleteFood}
-                handleEditFood={this.handleEditFood}
-              />
+  return (
+    <Container>
+      <Box sx={{ width: '100%', paddingTop: 4 }}>
+        <Typography variant="h4" component="div" gutterBottom>
+          Cadastro dos papéis do robô Meia Barra
+        </Typography>
+      </Box>
+      <OperacoesForm onComplete={onComplete} operacao={operacaoEdit} />
+      <TableContainer component={Paper} sx={{ marginTop: "2rem" }}>
+        <Table sx={{ minWidth: 650 }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>
+                <Typography variant="h6">
+                  Data
+                </Typography>
+              </TableCell>
+              <TableCell >
+                <Typography variant="h6">
+                  Papeis
+                </Typography>
+              </TableCell>
+              <TableCell >
+                <Typography variant="h6">
+                  Sentido
+                </Typography>
+              </TableCell>
+              <TableCell >
+                <Typography variant="h6">
+                  Ações
+                </Typography>
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {operacoes.map((operacao) => (
+              <TableRow
+                key={operacao.uuid}
+                sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+              >
+                <TableCell component="th" scope="row">
+                  {operacao.data}
+                </TableCell>
+                <TableCell >{operacao.lista}</TableCell>
+                <TableCell >{operacao.operacao}</TableCell>
+                <TableCell >
+                  <Tooltip title="Editar">
+                    <IconButton onClick={() => prepareToEdit(operacao)}>
+                      <EditOutlined />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Deletar">
+                    <IconButton onClick={() => handleDeleteOperacao(operacao.uuid)}>
+                      <DeleteOutline />
+                    </IconButton>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
             ))}
-        </FoodsContainer>
-      </>
-    );
-  }
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Container >
+  );
 };
 
 export default Dashboard;
